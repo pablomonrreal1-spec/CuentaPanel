@@ -9,8 +9,10 @@ INFOPLIST_KEY_UILaunchScreen_Generation = YES
 INFOPLIST_KEY_NSPhotoLibraryUsageDescription = Selecciona fotos para adjuntar en WhatsApp Web.
 INFOPLIST_KEY_NSCameraUsageDescription = Usa la cámara cuando una acción de WhatsApp Web lo solicite.
 INFOPLIST_KEY_NSMicrophoneUsageDescription = Usa el micrófono cuando grabes en WhatsApp Web.
-CURRENT_PROJECT_VERSION = 4
+CURRENT_PROJECT_VERSION = 6
 MARKETING_VERSION = 0.1.0
 CODE_SIGN_STYLE = Automatic
 
 ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon
+
+ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = Verde Violeta

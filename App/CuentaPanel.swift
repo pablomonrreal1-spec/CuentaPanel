@@ -1,10 +1,14 @@
 import SwiftUI
 import UIKit
 import WebKit
+import PhotosUI
+import ImageIO
 
 struct Account: Codable, Identifiable {
     let id: UUID
     var name: String
+    var photo: Data?
+    var symbol: String?
     let tint: Int
 
     init(_ name: String, tint: Int) {
@@ -47,13 +51,17 @@ final class Profiles: ObservableObject {
         persist()
     }
 
-    func save(_ name: String, editing id: UUID?) {
+    func save(_ name: String, photo: Data?, symbol: String, editing id: UUID?) {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         if let id, let index = accounts.firstIndex(where: { $0.id == id }) {
             accounts[index].name = trimmed
+            accounts[index].photo = photo
+            accounts[index].symbol = symbol
         } else {
-            let account = Account(trimmed, tint: accounts.count)
+            var account = Account(trimmed, tint: accounts.count)
+            account.photo = photo
+            account.symbol = symbol
             accounts.append(account)
             selection = account.id
         }
@@ -83,6 +91,7 @@ struct AccountEditor: Identifiable {
 struct Panel: View {
     @StateObject private var profiles = Profiles()
     @State private var editor: AccountEditor?
+    @State private var iconError = false
 
     var body: some View {
         NavigationSplitView {
@@ -93,12 +102,12 @@ struct Panel: View {
                             Label {
                                 Text(account.name)
                             } icon: {
-                                Image(systemName: "person.crop.circle.fill")
+                                AccountBadge(photo: account.photo, symbol: account.symbol)
                                     .foregroundStyle(account.color)
                             }
                         }
                         .contextMenu {
-                            Button("Cambiar nombre", systemImage: "pencil") {
+                            Button("Editar cuenta", systemImage: "pencil") {
                                 editor = AccountEditor(account: account)
                             }
                         }
@@ -109,6 +118,15 @@ struct Panel: View {
             .navigationTitle("WhatsApps")
             .navigationSplitViewColumnWidth(min: 190, ideal: 220, max: 300)
             .toolbar {
+                Menu {
+                    ForEach(["Azul", "Verde", "Violeta"], id: \.self) { color in
+                        Button(color) {
+                            UIApplication.shared.setAlternateIconName(color == "Azul" ? nil : color) { error in
+                                if error != nil { DispatchQueue.main.async { iconError = true } }
+                            }
+                        }
+                    }
+                } label: { Label("Icono de la app", systemImage: "app.badge") }
                 Button("Añadir cuenta", systemImage: "plus") { editor = AccountEditor() }
             }
         } detail: {
@@ -123,7 +141,7 @@ struct Panel: View {
                         Button("Recargar WhatsApp", systemImage: "arrow.clockwise") {
                             controller.loadWhatsApp()
                         }
-                        Button("Cambiar nombre", systemImage: "pencil") {
+                        Button("Editar cuenta", systemImage: "pencil") {
                             editor = AccountEditor(account: account)
                         }
                     }
@@ -132,10 +150,23 @@ struct Panel: View {
             }
         }
         .navigationSplitViewStyle(.balanced)
+        .alert("No se pudo cambiar el icono de la app", isPresented: $iconError) { Button("Aceptar") {} }
         .sheet(item: $editor) { item in
-            ProfileForm(name: item.account?.name ?? "", editing: item.account != nil) { name in
-                profiles.save(name, editing: item.account?.id)
+            ProfileForm(name: item.account?.name ?? "", photo: item.account?.photo, symbol: item.account?.symbol ?? "person.crop.circle.fill", editing: item.account != nil) { name, photo, symbol in
+                profiles.save(name, photo: photo, symbol: symbol, editing: item.account?.id)
             }
+        }
+    }
+}
+
+struct AccountBadge: View {
+    let photo: Data?
+    let symbol: String?
+    var body: some View {
+        if let photo, let image = UIImage(data: photo) {
+            Image(uiImage: image).resizable().scaledToFill().frame(width: 32, height: 32).clipShape(Circle())
+        } else {
+            Image(systemName: symbol ?? "person.crop.circle.fill")
         }
     }
 }
@@ -143,26 +174,57 @@ struct Panel: View {
 struct ProfileForm: View {
     @Environment(\.dismiss) private var dismiss
     @State var name: String
+    @State var photo: Data?
+    @State var symbol: String
+    @State private var selectedPhoto: PhotosPickerItem?
+    @State private var loading = false
+    @State private var failed = false
     let editing: Bool
-    let save: (String) -> Void
+    let save: (String, Data?, String) -> Void
 
     var body: some View {
         NavigationStack {
             Form {
                 TextField("Nombre de la cuenta", text: $name)
+                Section("Imagen de la cuenta") {
+                    AccountBadge(photo: photo, symbol: symbol)
+                    PhotosPicker("Elegir foto", selection: $selectedPhoto, matching: .images)
+                    Menu("Elegir símbolo") {
+                        ForEach(["person.crop.circle.fill", "graduationcap.fill", "book.fill", "building.2.fill", "heart.fill"], id: \.self) { value in
+                            Button { selectedPhoto = nil; photo = nil; symbol = value; loading = false; failed = false } label: { Image(systemName: value) }
+                        }
+                    }
+                    if loading { ProgressView() }
+                    if failed { Text("No se pudo abrir la foto. Elige otra.") }
+                }
                 if !editing {
                     Text("Usa Dispositivos vinculados en el teléfono de esta cuenta para escanear el código QR.")
                         .foregroundStyle(.secondary)
                 }
             }
-            .navigationTitle(editing ? "Cambiar nombre" : "Añadir cuenta")
+            .task(id: selectedPhoto) {
+                guard let item = selectedPhoto else { return }
+                loading = true
+                failed = false
+                let bytes = try? await item.loadTransferable(type: Data.self)
+                guard !Task.isCancelled else { return }
+                let options: [CFString: Any] = [kCGImageSourceCreateThumbnailFromImageAlways: true,
+                    kCGImageSourceCreateThumbnailWithTransform: true, kCGImageSourceThumbnailMaxPixelSize: 192]
+                if let bytes, let source = CGImageSourceCreateWithData(bytes as CFData, nil),
+                   let thumb = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary),
+                   let jpeg = UIImage(cgImage: thumb).jpegData(compressionQuality: 0.85) {
+                    photo = jpeg
+                } else { failed = true }
+                loading = false
+            }
+            .navigationTitle(editing ? "Editar cuenta" : "Añadir cuenta")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancelar") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Guardar") { save(name); dismiss() }
-                        .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    Button("Guardar") { save(name, photo, symbol); dismiss() }
+                        .disabled(loading || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
         }
@@ -193,6 +255,9 @@ final class ChatController: UIViewController, WKNavigationDelegate, WKUIDelegate
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = WKWebsiteDataStore(forIdentifier: profile)
         configuration.defaultWebpagePreferences.preferredContentMode = .desktop
+        // Desktop WebKit in an embedded view can omit the Safari version token.
+        let os = ProcessInfo.processInfo.operatingSystemVersion
+        configuration.applicationNameForUserAgent = "Version/\(os.majorVersion).\(os.minorVersion) Safari/605.1.15"
         webView = WKWebView(frame: .zero, configuration: configuration)
         super.init(nibName: nil, bundle: nil)
     }
