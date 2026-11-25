@@ -4,10 +4,13 @@
  classes = {};
  objectVersion = 56;
  objects = {
+  B00000000000000000000001 = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = App/Assets.xcassets; sourceTree = "<group>"; };
+  B00000000000000000000002 = {isa = PBXBuildFile; fileRef = B00000000000000000000001; };
+  B00000000000000000000003 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (B00000000000000000000002); runOnlyForDeploymentPostprocessing = 0; };
   A00000000000000000000001 = {isa = PBXProject; buildConfigurationList = A00000000000000000000009; compatibilityVersion = "Xcode 14.0"; developmentRegion = es; knownRegions = (es, Base); mainGroup = A00000000000000000000002; productRefGroup = A00000000000000000000003; projectDirPath = ""; projectRoot = ""; targets = (A00000000000000000000004); };
-  A00000000000000000000002 = {isa = PBXGroup; children = (A00000000000000000000005, A0000000000000000000000F, A00000000000000000000003); sourceTree = "<group>"; };
+  A00000000000000000000002 = {isa = PBXGroup; children = (B00000000000000000000001, A00000000000000000000005, A0000000000000000000000F, A00000000000000000000003); sourceTree = "<group>"; };
   A00000000000000000000003 = {isa = PBXGroup; children = (A00000000000000000000006); name = Products; sourceTree = "<group>"; };
-  A00000000000000000000004 = {isa = PBXNativeTarget; buildConfigurationList = A0000000000000000000000A; buildPhases = (A00000000000000000000007); buildRules = (); dependencies = (); name = CuentaPanel; productName = CuentaPanel; productReference = A00000000000000000000006; productType = "com.apple.product-type.application"; };
+  A00000000000000000000004 = {isa = PBXNativeTarget; buildConfigurationList = A0000000000000000000000A; buildPhases = (A00000000000000000000007, B00000000000000000000003); buildRules = (); dependencies = (); name = CuentaPanel; productName = CuentaPanel; productReference = A00000000000000000000006; productType = "com.apple.product-type.application"; };
   A00000000000000000000005 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/CuentaPanel.swift; sourceTree = "<group>"; };
   A00000000000000000000006 = {isa = PBXFileReference; explicitFileType = wrapper.application; path = CuentaPanel.app; sourceTree = BUILT_PRODUCTS_DIR; };
   A00000000000000000000007 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A00000000000000000000008); runOnlyForDeploymentPostprocessing = 0; };

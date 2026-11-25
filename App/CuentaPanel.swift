@@ -106,7 +106,7 @@ struct Panel: View {
                 }
             }
             .listStyle(.sidebar)
-            .navigationTitle("CuentaPanel")
+            .navigationTitle("WhatsApps")
             .navigationSplitViewColumnWidth(min: 190, ideal: 220, max: 300)
             .toolbar {
                 Button("Añadir cuenta", systemImage: "plus") { editor = AccountEditor() }
