@@ -1,0 +1,40 @@
+name: Compilar CuentaPanel
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ipad:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compilar para iPad
+        run: |
+          set -euo pipefail
+          xcodebuild -project CuentaPanel.xcodeproj \
+            -target CuentaPanel \
+            -sdk iphoneos \
+            -configuration Release \
+            CODE_SIGNING_ALLOWED=NO \
+            CONFIGURATION_BUILD_DIR="$RUNNER_TEMP/product" \
+            build
+
+          mkdir -p Payload
+          cp -R "$RUNNER_TEMP/product/CuentaPanel.app" Payload/
+          test -x Payload/CuentaPanel.app/CuentaPanel
+          /usr/bin/ditto -c -k --keepParent Payload CuentaPanel.ipa
+          unzip -t CuentaPanel.ipa
+
+      - name: Guardar archivo para iPad
+        uses: actions/upload-artifact@v4
+        with:
+          name: CuentaPanel-iPad
+          path: CuentaPanel.ipa
+          if-no-files-found: error
